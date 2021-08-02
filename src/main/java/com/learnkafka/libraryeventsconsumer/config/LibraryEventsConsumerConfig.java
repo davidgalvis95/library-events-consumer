@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.kafka.ConcurrentKafkaListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.dao.RecoverableDataAccessException;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
@@ -13,6 +14,9 @@ import org.springframework.retry.RetryPolicy;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 @EnableKafka
@@ -48,10 +52,16 @@ public class LibraryEventsConsumerConfig {
     }
 
     private RetryPolicy simpleRetryPolicy() {
-        final SimpleRetryPolicy simpleRetryPolicy = new SimpleRetryPolicy();
+        //This is a map that is used in the SimpleRetryPolicy in another of its constructors so that we specify when to retry (for which exception to retry)
+//      And for which one we should not retry
+        final Map<Class<? extends Throwable>, Boolean> exceptionsMap = new HashMap<>();
+        exceptionsMap.put(IllegalArgumentException.class, false);
+        exceptionsMap.put(RecoverableDataAccessException.class, true);
+//        final SimpleRetryPolicy simpleRetryPolicy = new SimpleRetryPolicy();
         //This is the number of times kafka will try if there is an exception, until there will be success, if not success then it will be converted in an error]
         //handled by the error handler
-        simpleRetryPolicy.setMaxAttempts(3);
+        final SimpleRetryPolicy simpleRetryPolicy = new SimpleRetryPolicy(3, exceptionsMap, true);
+//        simpleRetryPolicy.setMaxAttempts(3);
         return simpleRetryPolicy;
     }
 }

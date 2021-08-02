@@ -157,6 +157,23 @@ public class LibraryEventsConsumerIntegrationTest {
         CountDownLatch latch = new CountDownLatch(1);
         latch.await(3, TimeUnit.SECONDS);
 
+//      Now, due that we only recover for a specific exceptions that is thrown if the update comes with an id of 000, which is not this case
+//      This won't retry, but will go ahead to transform that into an error right away
+        verify(libraryEventsConsumer, atLeast(1)).onMessage(isA(ConsumerRecord.class));
+        verify(libraryEventsService, atLeast(1)).processLibraryEvent(isA(ConsumerRecord.class));
+    }
+
+    @Test
+    void publishModifyLibraryEvent_000_LibraryEventId() throws JsonProcessingException, InterruptedException {
+        //given
+        Integer libraryEventId = 000;
+        String json = "{\"libraryEventId\":" + libraryEventId + ",\"libraryEventType\":\"UPDATE\",\"book\":{\"bookId\":1234,\"bookName\":\"My book\",\"bookAuthor\":\"David\"}}";
+//        kafkaTemplate.sendDefault(libraryEventId, json).get();
+        kafkaTemplate.send(TOPIC, libraryEventId, json);
+        //when
+        CountDownLatch latch = new CountDownLatch(1);
+        latch.await(3, TimeUnit.SECONDS);
+
 //      Since there is a retry policy implemented with a max attempts of 3 times, and a backoff of 1 second, this spies are invoked 3 times
 //      due that this continues failing, then the spies are invoked 3fold
         verify(libraryEventsConsumer, atLeast(3)).onMessage(isA(ConsumerRecord.class));
