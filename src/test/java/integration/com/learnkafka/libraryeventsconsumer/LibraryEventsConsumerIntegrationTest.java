@@ -157,9 +157,10 @@ public class LibraryEventsConsumerIntegrationTest {
         CountDownLatch latch = new CountDownLatch(1);
         latch.await(3, TimeUnit.SECONDS);
 
-
-        verify(libraryEventsConsumer, atLeast(1)).onMessage(isA(ConsumerRecord.class));
-        verify(libraryEventsService, atLeast(1)).processLibraryEvent(isA(ConsumerRecord.class));
+//      Since there is a retry policy implemented with a max attempts of 3 times, and a backoff of 1 second, this spies are invoked 3 times
+//      due that this continues failing, then the spies are invoked 3fold
+        verify(libraryEventsConsumer, atLeast(3)).onMessage(isA(ConsumerRecord.class));
+        verify(libraryEventsService, atLeast(3)).processLibraryEvent(isA(ConsumerRecord.class));
     }
 
 }

@@ -9,6 +9,10 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.retry.RetryPolicy;
+import org.springframework.retry.backoff.FixedBackOffPolicy;
+import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 
 @Configuration
 @EnableKafka
@@ -30,6 +34,24 @@ public class LibraryEventsConsumerConfig {
             //Usually this implementation to use a custom error handler is done to persist some damaged record to DB or keep track of it
             //Persist
         }));
+        factory.setRetryTemplate(retryTemplate());
         return factory;
+    }
+
+    private RetryTemplate retryTemplate() {
+        final FixedBackOffPolicy fixedBackOffPolicy = new FixedBackOffPolicy();
+        fixedBackOffPolicy.setBackOffPeriod(1000);
+        final RetryTemplate retryTemplate = new RetryTemplate();
+        retryTemplate.setRetryPolicy(simpleRetryPolicy());
+        retryTemplate.setBackOffPolicy(fixedBackOffPolicy);
+        return retryTemplate;
+    }
+
+    private RetryPolicy simpleRetryPolicy() {
+        final SimpleRetryPolicy simpleRetryPolicy = new SimpleRetryPolicy();
+        //This is the number of times kafka will try if there is an exception, until there will be success, if not success then it will be converted in an error]
+        //handled by the error handler
+        simpleRetryPolicy.setMaxAttempts(3);
+        return simpleRetryPolicy;
     }
 }
