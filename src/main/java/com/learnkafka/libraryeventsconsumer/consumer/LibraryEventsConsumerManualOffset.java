@@ -7,8 +7,9 @@ import org.springframework.kafka.listener.AcknowledgingMessageListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
-@Component
+//@Component
 @Slf4j
+//In order to acknowledge manually we need to implement this interface
 public class LibraryEventsConsumerManualOffset implements AcknowledgingMessageListener<Integer, String> {
 
     //To manually commit the offsets we should implement this interface
