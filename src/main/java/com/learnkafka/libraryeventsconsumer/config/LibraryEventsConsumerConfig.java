@@ -1,6 +1,9 @@
 package com.learnkafka.libraryeventsconsumer.config;
 
+import com.learnkafka.libraryeventsconsumer.service.LibraryEventsService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.kafka.ConcurrentKafkaListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +18,8 @@ import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,6 +27,9 @@ import java.util.Map;
 @EnableKafka
 @Slf4j
 public class LibraryEventsConsumerConfig {
+
+    @Autowired
+    private LibraryEventsService libraryEventsService;
 
     //we will override the common behavior of this bean in order to configure how kafka reads the records, acknowledge them and commit the offsets
     //This bean was extracted from the KafkaAnnotationDrivenConfiguration class, which was found by the KafkaAutoConfiguration class
@@ -43,6 +51,13 @@ public class LibraryEventsConsumerConfig {
             if(context.getLastThrowable().getCause() instanceof RecoverableDataAccessException){
                 //invoke recovery logic
                 log.info("Inside the recoverable logic");
+//                Arrays.asList(context.attributeNames())
+//                        .forEach( attributeName -> {
+//                            log.info("Attribute names is {}: ", attributeName);
+//                            log.info("Attribute value is {}: ", context.getAttribute(attributeName));
+//                        });
+                final ConsumerRecord<Integer, String> consumerRecord = (ConsumerRecord<Integer, String>) context.getAttribute("record");
+                libraryEventsService.handleRecovery(consumerRecord);
             }else{
                 log.info("Inisde the non recoverable logic");
                 throw new RuntimeException(context.getLastThrowable().getMessage());

@@ -8,7 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.RecoverableDataAccessException;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import java.util.Optional;
 
@@ -16,8 +20,13 @@ import java.util.Optional;
 @Slf4j
 public class LibraryEventsService {
 
+    private static final String TOPIC = "library-events";
+
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private KafkaTemplate<Integer, String> kafkaTemplate;
 
     @Autowired
     private LibraryEventsRepository repository;
@@ -26,7 +35,7 @@ public class LibraryEventsService {
         final LibraryEvent libraryEvent = objectMapper.readValue(consumerRecord.value(), LibraryEvent.class);
 
 
-        if(libraryEvent.getLibraryEventId() != null && libraryEvent.getLibraryEventId() == 000) {
+        if (libraryEvent.getLibraryEventId() != null && libraryEvent.getLibraryEventId() == 000) {
             throw new RecoverableDataAccessException("Temporary network issue");
         }
 
@@ -60,5 +69,45 @@ public class LibraryEventsService {
         libraryEvent.getBook().setLibraryEvent(libraryEvent);
         repository.save(libraryEvent);
         log.info("Successfully persisted library event {}", libraryEvent);
+    }
+
+    public void handleRecovery(final ConsumerRecord<Integer, String> record) {
+        final Integer key = record.key();
+        final String value = record.value();
+        final ListenableFuture<SendResult<Integer, String>> listenableFuture = kafkaTemplate.send(TOPIC, key, value);
+        listenableFuture.addCallback( new ListenableFutureCallback<SendResult<Integer, String>>()
+        {
+            @Override
+            public void onFailure( final Throwable ex )
+            {
+                handleFailure( key, value, ex );
+            }
+
+
+            @Override
+            public void onSuccess( final SendResult<Integer, String> result )
+            {
+                handleSuccess( key, value, result );
+            }
+        } );
+    }
+
+    private void handleSuccess(Integer key,
+                               String value,
+                               SendResult<Integer, String> result) {
+        log.info("Message sent successfully for key {}, value {}, to partition {}", key, value, result.getRecordMetadata().partition());
+    }
+
+
+    private void handleFailure(Integer key,
+                               String value,
+                               Throwable exception) {
+        log.info("Error sending message: {}", exception.getMessage());
+
+        try {
+            throw exception;
+        } catch (Throwable throwable) {
+            log.error("Error in OnFailure {}", throwable.getMessage());
+        }
     }
 }
