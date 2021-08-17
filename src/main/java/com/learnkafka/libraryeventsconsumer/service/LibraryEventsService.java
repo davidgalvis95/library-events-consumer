@@ -26,13 +26,13 @@ public class LibraryEventsService {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private KafkaTemplate<Integer, String> kafkaTemplate;
+    private KafkaTemplate<Integer, LibraryEvent> kafkaTemplate;
 
     @Autowired
     private LibraryEventsRepository repository;
 
-    public void processLibraryEvent(ConsumerRecord<Integer, String> consumerRecord) throws JsonProcessingException {
-        final LibraryEvent libraryEvent = objectMapper.readValue(consumerRecord.value(), LibraryEvent.class);
+    public void processLibraryEvent(ConsumerRecord<Integer, LibraryEvent> consumerRecord) throws JsonProcessingException {
+        final LibraryEvent libraryEvent = consumerRecord.value();
 
 
         if (libraryEvent.getLibraryEventId() != null && libraryEvent.getLibraryEventId() == 000) {
@@ -71,11 +71,11 @@ public class LibraryEventsService {
         log.info("Successfully persisted library event {}", libraryEvent);
     }
 
-    public void handleRecovery(final ConsumerRecord<Integer, String> record) {
+    public void handleRecovery(final ConsumerRecord<Integer, LibraryEvent> record) {
         final Integer key = record.key();
-        final String value = record.value();
-        final ListenableFuture<SendResult<Integer, String>> listenableFuture = kafkaTemplate.send(TOPIC, key, value);
-        listenableFuture.addCallback( new ListenableFutureCallback<SendResult<Integer, String>>()
+        final LibraryEvent value = record.value();
+        final ListenableFuture<SendResult<Integer, LibraryEvent>> listenableFuture = kafkaTemplate.send(TOPIC, key, value);
+        listenableFuture.addCallback( new ListenableFutureCallback<SendResult<Integer, LibraryEvent>>()
         {
             @Override
             public void onFailure( final Throwable ex )
@@ -85,7 +85,7 @@ public class LibraryEventsService {
 
 
             @Override
-            public void onSuccess( final SendResult<Integer, String> result )
+            public void onSuccess( final SendResult<Integer, LibraryEvent> result )
             {
                 handleSuccess( key, value, result );
             }
@@ -93,14 +93,14 @@ public class LibraryEventsService {
     }
 
     private void handleSuccess(Integer key,
-                               String value,
-                               SendResult<Integer, String> result) {
+                               LibraryEvent value,
+                               SendResult<Integer, LibraryEvent> result) {
         log.info("Message sent successfully for key {}, value {}, to partition {}", key, value, result.getRecordMetadata().partition());
     }
 
 
     private void handleFailure(Integer key,
-                               String value,
+                               LibraryEvent value,
                                Throwable exception) {
         log.info("Error sending message: {}", exception.getMessage());
 

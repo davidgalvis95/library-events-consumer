@@ -1,6 +1,7 @@
 package com.learnkafka.libraryeventsconsumer.consumer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.learnkafka.libraryeventsconsumer.entity.LibraryEvent;
 import com.learnkafka.libraryeventsconsumer.service.LibraryEventsService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -16,7 +17,7 @@ public class LibraryEventsConsumer {
     private LibraryEventsService libraryEventsService;
 
     @KafkaListener(topics = {"library-events"})
-    public void onMessage(ConsumerRecord<Integer, String> record) throws JsonProcessingException {
+    public void onMessage(ConsumerRecord<Integer, LibraryEvent> record) throws JsonProcessingException {
         log.info("ConsumerRecord : {} ", record);
         libraryEventsService.processLibraryEvent(record);
     }
