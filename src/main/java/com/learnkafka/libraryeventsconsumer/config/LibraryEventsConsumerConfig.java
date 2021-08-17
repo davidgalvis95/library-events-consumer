@@ -42,8 +42,8 @@ public class LibraryEventsConsumerConfig {
 
     private final String groupId;
 
-    public LibraryEventsConsumerConfig(@Value("${spring.kafka.producer.bootstrap-servers}") final String bootstrapAddress,
-                                       @Value("${spring.kafka.producer.bootstrap-servers}") final String groupId) {
+    public LibraryEventsConsumerConfig(@Value("${spring.kafka.consumer.bootstrap-servers}") final String bootstrapAddress,
+                                       @Value("${spring.kafka.consume.group-id}") final String groupId) {
         this.bootstrapAddress = bootstrapAddress;
         this.groupId = groupId;
     }
